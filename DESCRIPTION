@@ -1,0 +1,17 @@
+Package: cgmMetrics
+Type: Package
+Title: Calculation of Continuous Glucose Monitoring (CGM) Metrics for Clinical Trials
+Version: 0.1.0
+Authors@R: 
+    person("Jonathan", "Williman", , email = "jonathan.williman@otago.ac.nz", role = c("aut", "cre"))
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: Clean raw continuous glucose monitoring (CGM) data, and create summary metrics according to internation consensus statements.
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    data.table,
+    Hmisc,
+    lubridate,
+    xts
+RoxygenNote: 7.2.3
