@@ -13,7 +13,7 @@
 #'
 #'
 
-make_metrics <- function(data, by_vars) {
+make_metrics <- function(data, by_vars, longform = TRUE) {
 
   ## Due to NSE notes in R CMD check
   events <- make_events <- NULL
@@ -25,11 +25,28 @@ make_metrics <- function(data, by_vars) {
   dat_hyper <- make_events(data, by_vars = by_vars, cutpoint = ">250", duration = 120)
 
   dat_events <- merge(
-    dat_hypo[, cgm2_03_ehypo  = sum(events), by_vars],
-    dat_hypo[, cgm2_04_ehyper = sum(events), by_vars],
+    dat_hypo[, list(cgm2_03_ehypo  = sum(events)), by_vars],
+    dat_hypo[, list(cgm2_04_ehyper = sum(events)), by_vars],
     by = by_vars, all = TRUE)
 
-  dat_metrics <- merge(dat_sums, dat_events, by = by_vars, all = TRUE)
+  dat_mwide <- merge(dat_sums, dat_events, by = by_vars, all = TRUE)
+
+  if(longform) {
+
+    dat_mlong <- data.table::melt(
+      dat_mwide, measure.vars = patterns("cgm"),
+      variable.name = "cgm_measures", value_name = "value")
+
+    dat_mlong[grepl("cgm.*(t)", cgm_measures), c("prop", "lower", "upper") := as.list(
+      Hmisc::binconf(value, obs_n, return.df = TRUE))]
+
+    return(dat_mlong)
+
+  } else {
+
+    return(dat_mwide)
+
+  }
 
 }
 
@@ -38,7 +55,7 @@ make_metrics <- function(data, by_vars) {
 #' Calculate continuous CGM summary metrics
 #'
 #' @description
-#' Calculates summary CGm metrics including:
+#' Calculates summary CGM metrics including:
 #' * Proportions of times spent in, above, or below, consensus ranges.
 #' * Summary measures (mean, standard deviation, coefficient of variation).
 #'
@@ -83,14 +100,7 @@ calc_summaries <- function(data, by_vars = NULL) {
     ), by = by_vars]
 
 
-  dat_long <- data.table::melt(
-    dat_wide, measure.vars = patterns("cgm"),
-    variable.name = "cgm_measures", value_name = "value")
-
-  dat_long[grepl("cgm.*(t)", cgm_measures), c("prop", "lower", "upper") := as.list(
-    Hmisc::binconf(value, obs_n, return.df = TRUE))]
-
-  return(dat_long[])
+  return(dat_wide[])
 
 
 }
@@ -149,6 +159,15 @@ calc_event <- function(data = NULL, by_vars, threshold = "<70", duration = 120, 
 
   dat_t1c[, (event_name) := floor((glu_event == TRUE) * mins/duration)]
 
-  return(dat_t1c[events >= 1])
+  dat_t1d <- merge(
+    unique(dat_t1c[, .SD, .SDcols = by_vars]),
+    dat_t1c[events >= 1, .SD, .SDcols = c(by_vars, "events", "mins")],
+    by = by_vars
+  )
+
+  dat_t1d[is.na(events), `:=` (events = 0, mins = 0)]
+
+  return(dat_t1d)
+
 }
 
