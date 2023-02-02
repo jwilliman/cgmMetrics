@@ -13,16 +13,16 @@
 #'
 #'
 
-make_metrics <- function(data, by_vars, longform = TRUE) {
+make_metrics <- function(data, by_vars, longform = FALSE) {
 
   ## Due to NSE notes in R CMD check
-  events <- make_events <- NULL
+  # events <- NULL
 
   dat_sums  <- calc_summaries(data, by_vars = by_vars)
 
-  dat_hypo  <- make_events(data, by_vars = by_vars, cutpoint = "<70", duration = 120)
+  dat_hypo  <- calc_events(data, by_vars = by_vars, threshold = "<70", duration = 120)
 
-  dat_hyper <- make_events(data, by_vars = by_vars, cutpoint = ">250", duration = 120)
+  dat_hyper <- calc_events(data, by_vars = by_vars, threshold = ">250", duration = 120)
 
   dat_events <- merge(
     dat_hypo[, list(cgm2_03_ehypo  = sum(events)), by_vars],
@@ -40,11 +40,11 @@ make_metrics <- function(data, by_vars, longform = TRUE) {
     dat_mlong[grepl("cgm.*(t)", cgm_measures), c("prop", "lower", "upper") := as.list(
       Hmisc::binconf(value, obs_n, return.df = TRUE))]
 
-    return(dat_mlong)
+    return(dat_mlong[])
 
   } else {
 
-    return(dat_mwide)
+    return(dat_mwide[])
 
   }
 
@@ -124,7 +124,7 @@ calc_summaries <- function(data, by_vars = NULL) {
 #' @export
 #'
 #'
-calc_event <- function(data = NULL, by_vars, threshold = "<70", duration = 120, event_name = "events") {
+calc_events <- function(data = NULL, by_vars, threshold = "<70", duration = 120, event_name = "events") {
 
 
   ## Due to NSE notes in R CMD check
@@ -144,15 +144,15 @@ calc_event <- function(data = NULL, by_vars, threshold = "<70", duration = 120, 
   dat[, `:=` (glu_event_id  = data.table::rleid(glu_event)), by = by_vars]
 
   ## Calculate duration of events (duration in 5 minute intervals)
-  by_vars <- c(by_vars, "glu_event", "glu_event_id")
-    dat_t1  <- dat[, .N, by = by_vars]
+  by_vars_glu <- c(by_vars, "glu_event", "glu_event_id")
+    dat_t1  <- dat[, .N, by = by_vars_glu]
 
   ## Drop events that last < 15 minutes, including missing values and return to normal limits.
   dat_t1b <- dat_t1[N >= 3, ]
 
   ## Merge adjacent similar events
-  dat_t1b[, glu_event_id := rleid(glu_event), by = by_vars]
-  dat_t1c <- dat_t1b[, .(N = sum(N)), by = by_vars ]
+  dat_t1b[, glu_event_id := rleid(glu_event), by = by_vars_glu]
+  dat_t1c <- dat_t1b[, .(N = sum(N)), by = by_vars_glu ]
 
   ## Convert number of observations to minutes, and define events.
   dat_t1c[, mins := N*5]
@@ -162,7 +162,7 @@ calc_event <- function(data = NULL, by_vars, threshold = "<70", duration = 120, 
   dat_t1d <- merge(
     unique(dat_t1c[, .SD, .SDcols = by_vars]),
     dat_t1c[events >= 1, .SD, .SDcols = c(by_vars, "events", "mins")],
-    by = by_vars
+    by = by_vars, all = TRUE
   )
 
   dat_t1d[is.na(events), `:=` (events = 0, mins = 0)]
