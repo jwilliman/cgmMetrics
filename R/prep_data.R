@@ -31,7 +31,7 @@ prep_data <- function(
   if(is.null(var_glucose))
     var_glucose = rev(names(date))[1]
 
-  keep_cols <- paste0(id_vars, var_datetime, var_glucose)
+  keep_cols <- paste(id_vars, var_datetime, var_glucose, sep = ", ")
 
 
   ## Make standardised data.table of specified columns and column names
