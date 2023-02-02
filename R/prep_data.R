@@ -15,6 +15,7 @@
 #'
 #' @return A data.table with the following columns; grouping variables (as indicated), datetime variables (obs_dttm, obt_dttmr, obs_dt, obs_tm), glucose measurements (glu).
 #' @import data.table
+#' @importFrom lubridate dminutes
 #' @export
 #'
 #'

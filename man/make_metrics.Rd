@@ -4,12 +4,14 @@
 \alias{make_metrics}
 \title{Calculate core and secondary CGM endpoints.}
 \usage{
-make_metrics(data, by_vars)
+make_metrics(data, by_vars, longform = FALSE)
 }
 \arguments{
 \item{data}{A data.table prepared for analysis using `prep_data` command.}
 
 \item{by_vars}{Grouping variables to summarise statistics by. If missing, assumes all character or factor columns.}
+
+\item{longform}{Logical indicating whether to reshape data long, or leave in wide form (the default).}
 }
 \value{
 A data.table with metrics named with the prefix 'cgm'.

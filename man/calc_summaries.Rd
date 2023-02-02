@@ -15,7 +15,7 @@ calc_summaries(data, by_vars = NULL)
 A data.table containing the CGM summary metrics in long form.
 }
 \description{
-Calculates summary CGm metrics including:
+Calculates summary CGM metrics including:
 * Proportions of times spent in, above, or below, consensus ranges.
 * Summary measures (mean, standard deviation, coefficient of variation).
 }

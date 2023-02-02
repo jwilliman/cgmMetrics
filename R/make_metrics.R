@@ -6,6 +6,7 @@
 #'
 #' @param data A data.table prepared for analysis using `prep_data` command.
 #' @param by_vars Grouping variables to summarise statistics by. If missing, assumes all character or factor columns.
+#' @param longform Logical indicating whether to reshape data long, or leave in wide form (the default).
 #'
 #' @return A data.table with metrics named with the prefix 'cgm'.
 #' @import data.table
@@ -16,7 +17,7 @@
 make_metrics <- function(data, by_vars, longform = FALSE) {
 
   ## Due to NSE notes in R CMD check
-  # events <- NULL
+  events <- cgm_measures <- value <- obs_n <- NULL
 
   dat_sums  <- calc_summaries(data, by_vars = by_vars)
 
@@ -71,7 +72,7 @@ make_metrics <- function(data, by_vars, longform = FALSE) {
 calc_summaries <- function(data, by_vars = NULL) {
 
   ## Due to NSE notes in R CMD check
-  obs_n <- value <- cgm_measures <- glu <- NULL
+  glu <- NULL
 
   if(is.null(by_vars))
     by_vars <- names(data)[sapply(data, function(x) is.character(x) | is.factor(x))]
@@ -79,7 +80,7 @@ calc_summaries <- function(data, by_vars = NULL) {
   data.table::setkeyv(data, by_vars)
 
   dat_wide <- data[
-    , .(
+    , list(
       ## Observations
       obs_N = .N,
       obs_n = sum(!is.na(glu)),
