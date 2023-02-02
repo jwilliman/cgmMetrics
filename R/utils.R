@@ -1,3 +1,6 @@
+globalVariables(c(".", "patterns"))
+
+
 #' Complete a data table with missing combinations of data
 #'
 #' Turns implicit missing values into explicit missing values by adding empty rows. A simpler data.table version of `tidyr::complete()`. Modified from post on stackoverflow (https://stackoverflow.com/a/43483804/4241780).
@@ -25,7 +28,7 @@ completeDT <- function(DT, cols, fill = NULL){
 
   }
 
-  mDT = do.call(data.table::CJ, c(lapply(DT[, ..cols], make_vals), list(unique = TRUE)))
+  mDT = do.call(data.table::CJ, c(lapply(DT[, cols, with = FALSE], make_vals), list(unique = TRUE)))
 
   res = DT[mDT, on=names(mDT)]
   if (length(fill))
