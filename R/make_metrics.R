@@ -14,31 +14,33 @@
 #'
 #'
 
-make_metrics <- function(data, by_vars, time_var = NULL, output = NULL) {
+make_metrics <- function(data, id_vars, time_var = NULL, output = NULL) {
 
   ## Due to NSE notes in R CMD check
   events    <- cgm_measures <- value <- obs_n <- NULL
 
   # checkmate::assertFactor(data[[time_var]])
 
+  by_vars <- c(id_vars, time_var)
+
   # Calculate core summary statistics and secondary continuous outcomes
-  dat_sums  <- calc_summaries(data, by_vars = c(by_vars, time_var))
+  dat_sums  <- calc_summaries(data, by_vars = by_vars)
   # Convert counts to percentages
   calc_percent(dat_sums)
 
   # Calculate event rates
-  dat_hypo  <- calc_events(data, by_vars = c(by_vars, time_var), threshold = "<70", duration = 120)
-  dat_hyper <- calc_events(data, by_vars = c(by_vars, time_var), threshold = ">250", duration = 120)
+  dat_hypo  <- calc_events(data, by_vars = by_vars, threshold = "<70", duration = 120)
+  dat_hyper <- calc_events(data, by_vars = by_vars, threshold = ">250", duration = 120)
 
   dat_events <- merge(
-    dat_hypo[,  list(cgm2_03_ehypo  = sum(events)), c(by_vars, time_var)],
-    dat_hyper[, list(cgm2_04_ehyper = sum(events)), c(by_vars, time_var)],
+    dat_hypo[,  list(cgm2_03_ehypo  = sum(events)), by_vars],
+    dat_hyper[, list(cgm2_04_ehyper = sum(events)), by_vars],
     by = by_vars, all = TRUE)
 
   # Combine core and secondary continuous measures
-  dat_mwide <- merge(dat_sums, dat_events, by = c(by_vars, time_var), all = TRUE)
+  dat_mwide <- merge(dat_sums, dat_events, by = by_vars, all = TRUE)
 
-  setkeyv(dat_mwide, c(by_vars, time_var))
+  setkeyv(dat_mwide, by_vars)
 
   # Calculate secondary binary endpoints
   dat_mwide[, `:=` (
@@ -61,7 +63,7 @@ make_metrics <- function(data, by_vars, time_var = NULL, output = NULL) {
     # Change in HbA1c of >0.5% points
     # cgm3_09_dhba = (hba1c - hba1c[[1]]) > 0.5
 
-  ), by = by_vars]
+  ), by = id_vars]
 
   # Calculate secondary composite outcomes
   dat_mwide[, `:=` (
