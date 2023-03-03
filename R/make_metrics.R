@@ -6,7 +6,7 @@
 #'
 #' @param data A data.table prepared for analysis using `prep_data` command.
 #' @param by_vars Grouping variables to summarise statistics by. If missing, assumes all character or factor columns.
-#' @param longform Logical indicating whether to reshape data long, or leave in wide form (the default).
+#' @param output What type of dataset of output. Wide with 'counts', wide with 'percents', wide with 'times', or 'long'.
 #'
 #' @return A data.table with metrics named with the prefix 'cgm'.
 #' @import data.table
@@ -14,10 +14,10 @@
 #'
 #'
 
-make_metrics <- function(data, by_vars, longform = FALSE) {
+make_metrics <- function(data, by_vars, output = NULL) {
 
   ## Due to NSE notes in R CMD check
-  events <- cgm_measures <- value <- obs_n <- NULL
+  events    <- cgm_measures <- value <- obs_n <- NULL
 
   dat_sums  <- calc_summaries(data, by_vars = by_vars)
 
@@ -26,13 +26,28 @@ make_metrics <- function(data, by_vars, longform = FALSE) {
   dat_hyper <- calc_events(data, by_vars = by_vars, threshold = ">250", duration = 120)
 
   dat_events <- merge(
-    dat_hypo[, list(cgm2_03_ehypo  = sum(events)), by_vars],
-    dat_hypo[, list(cgm2_04_ehyper = sum(events)), by_vars],
+    dat_hypo[,  list(cgm2_03_ehypo  = sum(events)), by_vars],
+    dat_hyper[, list(cgm2_04_ehyper = sum(events)), by_vars],
     by = by_vars, all = TRUE)
 
   dat_mwide <- merge(dat_sums, dat_events, by = by_vars, all = TRUE)
 
-  if(longform) {
+  if(output %in% c("percent", "times"))
+  {
+
+    dat_pwide <- copy(dat_mwide)
+    calc_percent(dat_pwide)
+
+    if(output == "times") {
+
+      dat_twide <- copy(dat_pwide)
+      calc_times(dat_twide)
+
+    }
+
+  }
+
+  if(output == "long") {
 
     dat_mlong <- data.table::melt(
       dat_mwide, measure.vars = patterns("cgm"),
@@ -40,6 +55,8 @@ make_metrics <- function(data, by_vars, longform = FALSE) {
 
     dat_mlong[grepl("cgm.*(t)", cgm_measures), c("prop", "lower", "upper") := as.list(
       Hmisc::binconf(value, obs_n, return.df = TRUE))]
+
+    dat_mlong[grepl("cgm.*(t)", cgm_measures), time := as.ITime(prop * 24 * 60 * 60)]
 
     return(dat_mlong[])
 
@@ -86,17 +103,28 @@ calc_summaries <- function(data, by_vars = NULL) {
       obs_n = sum(!is.na(glu)),
 
       ## Core endpoints
-      cgm1_01_tir    = sum(data.table::between(glu, 70, 180, incbounds = TRUE), na.rm = TRUE), # 3.9 to 10.0 PRIMARY OUTCOME
-      cgm1_02_tbr70  = sum(glu < 70, na.rm = TRUE), # 3.9 mmol/L
-      cgm1_03_tbr54  = sum(glu < 54, na.rm = TRUE),  # 3.0 mmol/L
-      cgm1_04_tar180 = sum(glu > 180, na.rm = TRUE), # 10.0 mmol/L
-      cgm1_05_tar250 = sum(glu > 250, na.rm = TRUE), # 14.0 mmol/L
+      # Time in range 70–180 mg/dL (3·9–10·0 mmol/L)
+      cgm1_01_tir    = sum(data.table::between(glu, 70, 180, incbounds = TRUE), na.rm = TRUE),
+      # Time below range <70 mg/dL (<3·9 mmol/L), including readings of <54 mg/dL (<3·9 mmol/L)
+      cgm1_02_tbr70  = sum(glu < 70, na.rm = TRUE),
+      # Time below range <54 mg/dL (<3·0 mmol/L)
+      cgm1_03_tbr54  = sum(glu < 54, na.rm = TRUE),
+      # Time above range >180 mg/dL (>10·0 mmol/L), including readings of >250 mg/dL (<13·9 mmol/L)
+      cgm1_04_tar180 = sum(glu > 180, na.rm = TRUE),
+      # Time above range >250 mg/dL (>13·9 mmol/L)
+      cgm1_05_tar250 = sum(glu > 250, na.rm = TRUE),
+      # Coefficient of variation
       cgm1_06_cv     = stats::sd(glu, na.rm = TRUE) / mean(glu, na.rm = TRUE) * 100,
+      # SD of mean glucose
       cgm1_07_sd     = stats::sd(glu, na.rm = TRUE),
+      # Mean sensor glucose
       cgm1_08_mn     = mean(glu, na.rm = TRUE),
 
       ## Secondary endpoints (continuous outcomes)
-      cgm2_01_ttr  = sum(data.table::between(glu, 70, 140, incbounds = TRUE), na.rm = TRUE) # 3.9 to 7.8
+      # Time in tight range 70–140 mg/dL (3·9–7·8 mmol/L)
+      cgm2_01_ttr  = sum(data.table::between(glu, 70, 140, incbounds = TRUE), na.rm = TRUE),
+      # (Change in) Glucose Management Indicator
+      cgm2_02_gmi  = 3.31 + (0.02392 * mean(glu, na.rm = TRUE))
 
     ), by = by_vars]
 
@@ -172,3 +200,54 @@ calc_events <- function(data = NULL, by_vars, threshold = "<70", duration = 120,
 
 }
 
+#' Convert counts to percentages
+#'
+#' @param data Data table with columns to convert to percentages
+#' @param cols Character vector of names of columns containing counts to convert to percentages. If not supplied, columns containing the text 'tir', 'tbr', 'tar', or 'ttr' are converted.
+#' @param denom Character name of column containing denominator counts, or integer vector of counts to use as a denominator. If not supplied, 'obs_N' is used.
+#'
+#' @return Data table is modified in place, the function does not copy or return the data table.
+#' @export
+#'
+#' @examples
+
+calc_percent <- function(data, cols = NULL, denom = NULL) {
+
+  if(is.null(cols))
+    cols <- grepl("tir|tbr|tar|ttr", names(data))
+
+  if(is.null(denom))
+    total_obs = dat$obs_N
+
+  if(is.character(denom) & length(denom) == 1)
+    denom = dat[[denom]]
+
+  for(col in cols)
+    set(data, j = col, value = data[[col]]/denom*100)
+
+}
+
+
+#' Convert percentages to hours and minutes
+#'
+#' @param data Data table with columns to convert from percentages to hours and minutes.
+#' @param cols Character vector of names of columns containing counts to convert to percentages. If not supplied, columns containing the text 'tir', 'tbr', 'tar', or 'ttr' are converted.
+#' @param hours Integer denoting maximum number of hours. Default is 24 hours.
+#'
+#' @return Data table is modified in place, the function does not copy or return the data table.
+#' @export
+#'
+#' @examples
+
+calc_times <- function(data, cols = NULL, hours = 24) {
+
+  if(is.null(cols))
+    cols <- grepl("tir|tbr|tar|ttr", names(data))
+
+  if(is.character(denom) & length(denom) == 1)
+    denom = dat[[denom]]
+
+  for(col in cols)
+    data.table::set(data, j = col, value = data.table::as.ITime(data[[col]]*hours*60*60))
+
+}
