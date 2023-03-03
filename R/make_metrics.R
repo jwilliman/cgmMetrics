@@ -81,7 +81,7 @@ make_metrics <- function(data, id_vars, time_var = NULL, output = NULL) {
 
     ## Core and secondary continuous endpoints
     dat_clong <- data.table::melt(
-      dat_mwide[,.SD, .SDcols = c(by_vars, time_var, grep("obs|cgm(1|2).*", names(dat_mwide), value = TRUE))]
+      dat_mwide[,.SD, .SDcols = c(by_vars, grep("obs|cgm(1|2).*", names(dat_mwide), value = TRUE))]
       , measure.vars = patterns("cgm"),
       variable.name = "cgm_measures", value_name = "value")
 
@@ -93,7 +93,7 @@ make_metrics <- function(data, id_vars, time_var = NULL, output = NULL) {
 
     ## Binary and composite endpoints
     dat_blong <-  data.table::melt(
-      dat_mwide[,.SD, .SDcols = c(by_vars, time_var, grep("obs|cgm(3|4).*", names(dat_mwide), value = TRUE))]
+      dat_mwide[,.SD, .SDcols = c(by_vars, grep("obs|cgm(3|4).*", names(dat_mwide), value = TRUE))]
       , measure.vars = patterns("cgm"),
       variable.name = "cgm_measures", value_name = "value")
 
