@@ -6,7 +6,7 @@
 #'
 #' @param data A data.table prepared for analysis using `prep_data` command.
 #' @param by_vars Grouping variables to summarise statistics by. If missing, assumes all character or factor columns.
-#' @param output What type of dataset of output. Wide with 'counts', wide with 'percents', wide with 'times', or 'long'.
+#' @param output What type of dataset of output. 'Wide' (default) or 'long'.
 #'
 #' @return A data.table with metrics named with the prefix 'cgm'.
 #' @import data.table
@@ -14,55 +14,95 @@
 #'
 #'
 
-make_metrics <- function(data, by_vars, output = NULL) {
+make_metrics <- function(data, by_vars, time_var = NULL, output = NULL) {
 
   ## Due to NSE notes in R CMD check
   events    <- cgm_measures <- value <- obs_n <- NULL
 
-  dat_sums  <- calc_summaries(data, by_vars = by_vars)
+  # checkmate::assertFactor(data[[time_var]])
 
-  dat_hypo  <- calc_events(data, by_vars = by_vars, threshold = "<70", duration = 120)
+  # Calculate core summary statistics and secondary continuous outcomes
+  dat_sums  <- calc_summaries(data, by_vars = c(by_vars, time_var))
+  # Convert counts to percentages
+  calc_percent(dat_sums)
 
-  dat_hyper <- calc_events(data, by_vars = by_vars, threshold = ">250", duration = 120)
+  # Calculate event rates
+  dat_hypo  <- calc_events(data, by_vars = c(by_vars, time_var), threshold = "<70", duration = 120)
+  dat_hyper <- calc_events(data, by_vars = c(by_vars, time_var), threshold = ">250", duration = 120)
 
   dat_events <- merge(
-    dat_hypo[,  list(cgm2_03_ehypo  = sum(events)), by_vars],
-    dat_hyper[, list(cgm2_04_ehyper = sum(events)), by_vars],
+    dat_hypo[,  list(cgm2_03_ehypo  = sum(events)), c(by_vars, time_var)],
+    dat_hyper[, list(cgm2_04_ehyper = sum(events)), c(by_vars, time_var)],
     by = by_vars, all = TRUE)
 
-  dat_mwide <- merge(dat_sums, dat_events, by = by_vars, all = TRUE)
+  # Combine core and secondary continuous measures
+  dat_mwide <- merge(dat_sums, dat_events, by = c(by_vars, time_var), all = TRUE)
 
-  if(output %in% c("percent", "times"))
-  {
+  setkeyv(dat_mwide, c(by_vars, time_var))
 
-    dat_pwide <- copy(dat_mwide)
-    calc_percent(dat_pwide)
+  # Calculate secondary binary endpoints
+  dat_mwide[, `:=` (
+    # Time in range > 70%
+    cgm3_01_tir70  = cgm1_01_tir > 70,
+    # Change in time in range >= 5% improvement
+    cgm3_02_dtir5  = (cgm1_01_tir - cgm1_01_tir[[1]]) >= 5,
+    # Change in time in range >= 10% improvement
+    cgm3_03_dtir10 = (cgm1_01_tir - cgm1_01_tir[[1]]) >= 10,
+    # Time below range < 4%
+    cgm3_04_tbr4   = cgm1_02_tbr70 < 4,
+    # Time below low range (54mg/dL) < 1%
+    cgm3_05_tblr1  = cgm1_03_tbr54 < 1,
+    # Time above range < 25%
+    cgm3_06_tar25  = cgm1_04_tar180 < 25,
+    # Time above high range (250mg/dL) < 5%
+    cgm3_07_tahr5  = cgm1_05_tar250 < 5,
+    # Change in time below low range less than 0.5% increase
+    cgm3_08_dtblr5  = (cgm1_03_tbr54 - cgm1_03_tbr54[[1]]) > 0.5
+    # Change in HbA1c of >0.5% points
+    # cgm3_09_dhba = (hba1c - hba1c[[1]]) > 0.5
 
-    if(output == "times") {
+  ), by = by_vars]
 
-      dat_twide <- copy(dat_pwide)
-      calc_times(dat_twide)
+  # Calculate secondary composite outcomes
+  dat_mwide[, `:=` (
 
-    }
+    # cgm4_01_dhbatbr = cgm3_09_dhba & !cgm3_08_dtblr5,
+    cgm4_02_dtir10  = cgm3_03_dtir10 & !cgm3_08_dtblr5,
+    cgm4_03_mntbr1  = cgm1_08_mn < 154 & cgm3_05_tblr1,
+    cgm4_04_tirtbr4 = cgm3_01_tir70 & cgm3_04_tbr4,
+    cgm4_05_tirtbr4 = cgm3_01_tir70 & cgm3_05_tblr1
 
-  }
+  )]
 
+  # Reshape long
   if(output == "long") {
 
-    dat_mlong <- data.table::melt(
-      dat_mwide, measure.vars = patterns("cgm"),
+    ## Core and secondary continuous endpoints
+    dat_clong <- data.table::melt(
+      dat_mwide[,.SD, .SDcols = c(by_vars, time_var, grep("obs|cgm(1|2).*", names(dat_mwide), value = TRUE))]
+      , measure.vars = patterns("cgm"),
       variable.name = "cgm_measures", value_name = "value")
 
-    dat_mlong[grepl("cgm.*(t)", cgm_measures), c("prop", "lower", "upper") := as.list(
-      Hmisc::binconf(value, obs_n, return.df = TRUE))]
+    # dat_mlong[grepl("cgm(1.*t|.*3|.*4)", cgm_measures), c("prop", "lower", "upper") := as.list(
+    #   Hmisc::binconf(value, obs_n, return.df = TRUE))]
 
-    dat_mlong[grepl("cgm.*(t)", cgm_measures), time := as.ITime(prop * 24 * 60 * 60)]
+    ## Calculate times
+    dat_clong[grepl("tir|tbr|tar|ttr", cgm_measures), time := as.ITime(value * 24 * 60 * 60)]
 
-    return(dat_mlong[])
+    ## Binary and composite endpoints
+    dat_blong <-  data.table::melt(
+      dat_mwide[,.SD, .SDcols = c(by_vars, time_var, grep("obs|cgm(3|4).*", names(dat_mwide), value = TRUE))]
+      , measure.vars = patterns("cgm"),
+      variable.name = "cgm_measures", value_name = "value")
+
+    return(list(continuous = dat_clong[], binary = dat_blong[]))
 
   } else {
 
-    return(dat_mwide[])
+    dat_times <- dat_sums[, .SD, .SDcols = c(by_vars, time_var, grep("obs|tir|tbr|tar|ttr", names(dat_sums), value = TRUE))]
+    calc_times(dat_times)
+
+    return(list(metrics = dat_mwide[], times = dat_times[]))
 
   }
 
@@ -204,7 +244,7 @@ calc_events <- function(data = NULL, by_vars, threshold = "<70", duration = 120,
 #'
 #' @param data Data table with columns to convert to percentages
 #' @param cols Character vector of names of columns containing counts to convert to percentages. If not supplied, columns containing the text 'tir', 'tbr', 'tar', or 'ttr' are converted.
-#' @param denom Character name of column containing denominator counts, or integer vector of counts to use as a denominator. If not supplied, 'obs_N' is used.
+#' @param denom Character name of column containing denominator counts, or integer vector of counts to use as a denominator. If not supplied, 'obs_n' is used.
 #'
 #' @return Data table is modified in place, the function does not copy or return the data table.
 #' @export
@@ -214,13 +254,13 @@ calc_events <- function(data = NULL, by_vars, threshold = "<70", duration = 120,
 calc_percent <- function(data, cols = NULL, denom = NULL) {
 
   if(is.null(cols))
-    cols <- grepl("tir|tbr|tar|ttr", names(data))
+    cols <- grep("tir|tbr|tar|ttr", names(data), value = TRUE)
 
   if(is.null(denom))
-    total_obs = dat$obs_N
+    denom = data$obs_n
 
   if(is.character(denom) & length(denom) == 1)
-    denom = dat[[denom]]
+    denom = data[[denom]]
 
   for(col in cols)
     set(data, j = col, value = data[[col]]/denom*100)
@@ -231,7 +271,7 @@ calc_percent <- function(data, cols = NULL, denom = NULL) {
 #' Convert percentages to hours and minutes
 #'
 #' @param data Data table with columns to convert from percentages to hours and minutes.
-#' @param cols Character vector of names of columns containing counts to convert to percentages. If not supplied, columns containing the text 'tir', 'tbr', 'tar', or 'ttr' are converted.
+#' @param cols Character vector of names of columns containing percentages to convert to times. If not supplied, columns containing the text 'tir', 'tbr', 'tar', or 'ttr' are converted.
 #' @param hours Integer denoting maximum number of hours. Default is 24 hours.
 #'
 #' @return Data table is modified in place, the function does not copy or return the data table.
@@ -242,12 +282,9 @@ calc_percent <- function(data, cols = NULL, denom = NULL) {
 calc_times <- function(data, cols = NULL, hours = 24) {
 
   if(is.null(cols))
-    cols <- grepl("tir|tbr|tar|ttr", names(data))
-
-  if(is.character(denom) & length(denom) == 1)
-    denom = dat[[denom]]
+    cols <- grep("tir|tbr|tar|ttr", names(data), value = TRUE)
 
   for(col in cols)
-    data.table::set(data, j = col, value = data.table::as.ITime(data[[col]]*hours*60*60))
+    data.table::set(data, j = col, value = data.table::as.ITime(data[[col]]/100*hours*60*60))
 
 }
