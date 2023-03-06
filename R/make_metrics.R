@@ -44,6 +44,8 @@ make_metrics <- function(data, id_vars, time_var = NULL, output = NULL) {
 
   # Calculate secondary binary endpoints
   dat_mwide[, `:=` (
+    # Change in glucose management indicator
+    cgm2_02_dgmi   = cgm2_02_gmi - cgm2_02_gmi[[1]],
     # Time in range > 70%
     cgm3_01_tir70  = cgm1_01_tir > 70,
     # Change in time in range >= 5% improvement
