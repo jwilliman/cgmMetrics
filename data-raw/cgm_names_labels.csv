@@ -1,0 +1,27 @@
+﻿id,name,iglu_name,label_full,label_short,type,importance
+1.1,tir    ,in_range_70_180,Time in range 70–180 mg/dL (3·9–10·0 mmol/L),TIR (70-180),continuous,1
+1.2,tbr70  ,below_70,Time below range <70 mg/dL (<3·9 mmol/L),TBR (<70),continuous,1
+1.3,tbr54  ,below_54,Time below range <54 mg/dL (<3·0 mmol/L),TBR (<54),continuous,1
+1.4,tar180 ,above_180,Time above range >180 mg/dL (>10·0 mmol/L),TAR (>180),continuous,1
+1.5,tar250 ,above_250,Time above range >250 mg/dL (>13·9 mmol/L),TAR (>250),continuous,1
+1.6,cv     ,CV_glu,Coefficient of variation,CV,continuous,1
+1.7,sd     ,SD_glu,SD of mean glucose,SD,continuous,1
+1.8,mn,mean_glu,Mean sensor glucose,Mean,continuous,1
+2.1,cgm2_01_ttr,in_range_70_140,Time in tight range 70–140 mg/dL (3·9–7·8 mmol/L),TTR (70-140),continuous,2
+2.2,cgm2_02_gmi,GMI,Glucose Management Indicator,GMI,continuous,2
+2.2,cgm2_02_dgmi,GMI change,Change in Glucose Management Indicator,dGMI,continuous,2
+2.3,cgm2_03_ehypo ,hypoglycaemic_events,Extended hypoglycaemic event rate <70 mg/dL (<3·9 mmol/L),ehypo,continuous,2
+2.4,cgm2_04_ehyper,hyperglycaemic_events,Extended hyperglycaemic event rate >250 mg/dL (>13·9 mmol/L),ehyper,continuous,2
+3.1,cgm3_01_tir70   ,gt70pct_inrange,Time in range 70–180 mg/dL (3·9–10·0 mmol/L) for >70% of each day,TIR > 70%,binary,2
+3.2,cgm3_02_dtir5   ,gt05pct_better_in_range,Time in range 70–180 mg/dL (3·9–10·0 mmol/L) with ≥5% points improvement from baseline,dTIR > 5%,binary,2
+3.3,cgm3_03_dtir10  ,gt10pct_better_in_range,Time in range 70–180 mg/dL (3·9–10·0 mmol/L) with ≥10% points improvement from baseline,dTIR > 10%,binary,2
+3.4,cgm3_04_tbr4    ,lt04pct_below_70,Time below range <70 mg/dL (<3·9 mmol/L) for <4% of each day,TBR (70) < 4%,binary,2
+3.5,cgm3_05_tblr1   ,lt01pct_below_54,Time below range <54 mg/dL (<3·0 mmol/L) for <1% of each day,TBR (54) < 1%,binary,2
+3.6,cgm3_06_tar25   ,lt25pct_above_180,Time above range >180 mg/dL (>10·0 mmol/L) for <25% of each day,TAR (180) < 25%,binary,2
+3.7,cgm3_07_tahr5   ,lt25pct_above_250,Time above range <250 mg/dL (>13·9 mmol/L) for <5% of each day,TAR (250) < 5%,binary,2
+3.8,cgm3_08_dtblr5  ,gt.5pct_worse_below_54,Worsening (increase) in time below range <54 mg/dL (<3·0 mmol/L) of > 0.5%,dTBR (54) > 0.5%,binary,2
+4.1,cgm4_01_hbatbr,better_hba_same_tbr,Improvement in HbA1c of >0·5% points without an in increase in  time below range <54 mg/dL (<3·0 mmol/L) of >0·5%,dHbA > 0.5% & dTBR < 0.5%,binary,2
+4.2,cgm4_02_dtir10  ,better_tir_same_tbr,Improvement in time in range 70–180 mg/dL (3·0–10·0 mmol/L) of >10% points without an increase in time below range <54 mg/dL (<3·0 mmol/L) of >0·5%,dTIR > 10% & dTBR < 0.5%,binary,2
+4.3,cgm4_03_mntbr1  ,low_mean_low_tbr,mean glucose <154 mg/dL (<8·6 mmol/L) and <1% time below range <54 mg/dL (<3·0 mmol/),Mean < 154 & TAR (54) < 1%,binary,2
+4.4,cgm4_04_tirtbr4,high_tir_low_tbr,Time in range 70–180 mg/dL (3·0–10·0 mmol/L) of >70% and <4% time below range <70 mg/dL (<3·9 mmol/),TIR > 70% & TBR (70) < 4%,binary,2
+4.5,cgm4_05_tirtbr1,high_tir_low_tbr2,Time in range 70–180 mg/dL (3·0–10·0 mmol/L) of >70% and <1% time below range <54 mg/dL (<3·9 mmol/),TIR > 70% & TBR (54) < 1%,binary,2

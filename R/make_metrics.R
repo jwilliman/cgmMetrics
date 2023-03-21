@@ -74,7 +74,7 @@ make_metrics <- function(data, id_vars, time_var = NULL, output = NULL) {
     cgm4_02_dtir10  = cgm3_03_dtir10 & !cgm3_08_dtblr5,
     cgm4_03_mntbr1  = cgm1_08_mn < 154 & cgm3_05_tblr1,
     cgm4_04_tirtbr4 = cgm3_01_tir70 & cgm3_04_tbr4,
-    cgm4_05_tirtbr4 = cgm3_01_tir70 & cgm3_05_tblr1
+    cgm4_05_tirtbr1 = cgm3_01_tir70 & cgm3_05_tblr1
 
   )]
 
