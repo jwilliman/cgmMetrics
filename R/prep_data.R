@@ -65,7 +65,7 @@ prep_data <- function(
 
   ## Paste to force NA for non-existant dates.
   datx[is.na(obs_dttmr), obs_dttmr := as.POSIXct(paste(
-    obs_idate, obs_itime, tz = tz, format = "%Y-%m-%d %T"))]
+    obs_idate, obs_itime), tz = tz, format = "%Y-%m-%d %T")]
 
   ## Identify observations by Nocturnal (0000 h to 0559 h) or Daytime (0600 h to 2359 h).
   datx[, obs_dn := factor(
