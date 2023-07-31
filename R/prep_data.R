@@ -11,6 +11,7 @@
 #' @param id_vars A character vector of the names of any grouping variables to keep in the dataset.
 #' @param var_datetime The name of the datetime column. If missing, assumes the second last column.
 #' @param var_glucose The name of the column containing the glucose measurements. If missing, assumes the last column.
+#' @param var_keep The names of any other columns to keep in the final dataset.
 #' @param tz The timezone of the datetime field. Defaults to the system timezone if not specified.
 #'
 #' @return A data.table with the following columns; grouping variables (as indicated), datetime variables (obs_dttm, obt_dttmr, obs_dt, obs_tm), glucose measurements (glu).
@@ -20,7 +21,7 @@
 #'
 #'
 prep_data <- function(
-  data, id_vars = NULL, var_datetime = NULL, var_glucose = NULL,
+  data, id_vars = NULL, var_datetime = NULL, var_glucose = NULL, keep_vars = NULL,
   tz = Sys.timezone()) {
 
  ## Due to NSE notes in R CMD check
@@ -32,7 +33,7 @@ prep_data <- function(
   if(is.null(var_glucose))
     var_glucose = rev(names(date))[1]
 
-  keep_cols <- c(id_vars, var_datetime, var_glucose)
+  keep_cols <- c(id_vars, keep_vars, var_datetime, var_glucose)
 
 
   ## Make standardised data.table of specified columns and column names
@@ -62,7 +63,9 @@ prep_data <- function(
            completeDT, cols = c(id_vars, "obs_idate", "obs_itime"))
   )
 
-  datx[is.na(obs_dttmr), obs_dttmr := as.POSIXct(obs_idate, obs_itime, tz = tz)]
+  ## Paste to force NA for non-existant dates.
+  datx[is.na(obs_dttmr), obs_dttmr := as.POSIXct(paste(
+    obs_idate, obs_itime, tz = tz, format = "%Y-%m-%d %T"))]
 
   ## Identify observations by Nocturnal (0000 h to 0559 h) or Daytime (0600 h to 2359 h).
   datx[, obs_dn := factor(
