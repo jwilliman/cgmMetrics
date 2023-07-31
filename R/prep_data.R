@@ -15,7 +15,7 @@
 #'
 #' @return A data.table with the following columns; grouping variables (as indicated), datetime variables (obs_dttm, obt_dttmr, obs_dt, obs_tm), glucose measurements (glu).
 #' @import data.table
-#' @importFrom lubridate dminutes
+#' @importFrom clock date_floor
 #' @export
 #'
 #'
@@ -45,7 +45,7 @@ prep_data <- function(
 
   ## Make date and time variables
   ### Round datetime down to nearest 5 minute.
-  dat[, obs_dttmr := xts::align.time(obs_dttm, 5 * 60) - lubridate::dminutes(5)]
+  dat[, obs_dttmr := clock::date_floor(obs_dttm, "minute", n = 5)]
 
   # ## Correct missed date caused by daylight savings.
   # dat[is.na(obs_dttmr) & hour(obs_dttm) = 3
