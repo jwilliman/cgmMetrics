@@ -55,13 +55,13 @@ prep_data <- function(
   ### Split into date and time variables
   dat[, c("obs_idate", "obs_itime") := data.table::IDateTime(obs_dttmr, tz = tz)]
 
-  data.table::setkeyv(dat, c(id_vars, "obs_idate"))
+  data.table::setkeyv(dat, c(id_vars, "obs_idate", "obs_itime"))
 
   ## Completed missing days and times for day between the first and last
-  datx <- data.table::rbindlist(
-    lapply(split(dat, by = id_vars),
-           completeDT, cols = c(id_vars, "obs_idate", "obs_itime"))
-  )
+  ## Dropping empty data.tables
+  datx <- Filter(function(x) nrow(x) > 0, split(dat, by = id_vars)) |>
+    lapply(completeDT, cols = c(id_vars, "obs_idate", "obs_itime")) |>
+    data.table::rbindlist()
 
   ## Paste to force NA for non-existant dates.
   datx[is.na(obs_dttmr), obs_dttmr := as.POSIXct(paste(
