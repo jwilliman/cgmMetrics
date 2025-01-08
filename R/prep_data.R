@@ -13,6 +13,7 @@
 #' @param var_glucose The name of the column containing the glucose measurements. If missing, assumes the last column.
 #' @param var_keep The names of any other columns to keep in the final dataset.
 #' @param tz The timezone of the datetime field. Defaults to the system timezone if not specified.
+#' @param accuracy Interval in seconds to round time to, defaults to 5 minutes (300 seconds).
 #'
 #' @return A data.table with the following columns; grouping variables (as indicated), datetime variables (obs_dttm, obt_dttmr, obs_dt, obs_tm), glucose measurements (glu).
 #' @import data.table
@@ -22,7 +23,7 @@
 #'
 prep_data <- function(
   data, id_vars = NULL, var_datetime = NULL, var_glucose = NULL, keep_vars = NULL,
-  tz = Sys.timezone()) {
+  tz = Sys.timezone(), accuracy = 300L) {
 
  ## Due to NSE notes in R CMD check
   glu <- obs_dn <- obs_itime <- obs_idate <- obs_dttm <- obs_dttmr <- NULL
@@ -44,18 +45,25 @@ prep_data <- function(
 
   data.table::setnames(dat, c(var_datetime, var_glucose), c("obs_dttm", "glu"))
 
-  ## Make date and time variables
-  ### Round datetime down to nearest 5 minute.
-  dat[, obs_dttmr := clock::date_floor(obs_dttm, "minute", n = 5)]
-
-  # ## Correct missed date caused by daylight savings.
-  # dat[is.na(obs_dttmr) & hour(obs_dttm) = 3
-  #     , obs_dttmr := as.POSIXct(paste0(as.Date(obs_dttm), "03:00:00"))]
-
   ### Split into date and time variables
   dat[, c("obs_idate", "obs_itime") := data.table::IDateTime(obs_dttmr, tz = tz)]
 
   data.table::setkeyv(dat, c(id_vars, "obs_idate", "obs_itime"))
+
+  ## Make date and time variables
+  ### Round datetime down to required accuracy
+  # dat[, obs_dttmr := clock::date_floor(obs_dttm, "minute", n = 5)]
+
+  ### Round first observation of each day down according to specified accuracy
+  ### then add time to all other observations rounded to nearest specified accuracy
+  dat[, obs_rtime := (obs_1time %/% accuracy) * accuracy +
+        round( as.numeric(obs_itime - obs_1time) / (accuracy) ) * (accuracy)]
+
+  dat[, obs_dttmr := as.POSIXct(obs_idate) + obs_rtime]
+
+  # ## Correct missed date caused by daylight savings.
+  # dat[is.na(obs_dttmr) & hour(obs_dttm) = 3
+  #     , obs_dttmr := as.POSIXct(paste0(as.Date(obs_dttm), "03:00:00"))]
 
   ## Completed missing days and times for day between the first and last
   ## Dropping empty data.tables
@@ -65,11 +73,11 @@ prep_data <- function(
 
   ## Paste to force NA for non-existant dates.
   datx[is.na(obs_dttmr), obs_dttmr := as.POSIXct(paste(
-    obs_idate, obs_itime), tz = tz, format = "%Y-%m-%d %T")]
+    obs_idate, obs_rtime), tz = tz, format = "%Y-%m-%d %T")]
 
   ## Identify observations by Nocturnal (0000 h to 0559 h) or Daytime (0600 h to 2359 h).
   datx[, obs_dn := factor(
-    obs_itime < as.ITime("06:00:00")
+    obs_rtime < as.ITime("06:00:00")
     , levels = c(FALSE, TRUE), labels = c("Day", "Night"))]
 
 
