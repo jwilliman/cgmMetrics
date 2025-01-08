@@ -58,7 +58,7 @@ prep_data <- function(
   ### then add time to all other observations rounded to nearest specified accuracy
   dat[, obs_1time := min(obs_itime), by = c(id_vars, "obs_idate")]
   dat[, obs_rtime := (obs_1time %/% accuracy) * accuracy +
-        round( as.numeric(obs_itime - obs_1time) / (accuracy) ) * (accuracy)]
+        round_up( as.numeric(obs_itime - obs_1time) / (accuracy) ) * (accuracy)]
 
   ## Add difference to get corrected daylight savings value.
   dat[, obs_dttmr := obs_dttm + (obs_rtime - obs_itime)]
@@ -90,6 +90,11 @@ prep_data <- function(
     , glu_fct3 = cut(glu, breaks = c(0,69,180,501))
   )]
 
-  return(datx[])
+  # Occasionally there can be an extra reading each day if the interval between
+  # observations is fractionally less than the accuracy (i.e. 5 mins)
+  # These get recorded at a rounded time of 24:00:00
+  # When completing all possible times, extra times at 24:00:00 with missing glucose
+  # values get added to all other days. Drop these extras on returning the data frame.
+  return(datx[!(is.na(glu) & obs_rtime > as.ITime("23:59:59"))])
 
 }

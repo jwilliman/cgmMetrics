@@ -35,3 +35,18 @@ completeDT <- function(DT, cols, fill = NULL){
     res[, names(fill) := Map(replace, .SD, lapply(.SD, is.na), fill), .SDcols=names(fill)]
   res[]
 }
+
+
+#' Rounding of numbers, where 0.5 always rounds up
+
+#' @description
+#' The base `round` function rounds to the even digit. This version always rounds up, so 0.5, 1.5, 2.5 will round to 1, 2, 3.
+#'
+#' @param x a numeric vector
+#'
+#' @return a numeric vector
+#'
+#' @examples
+round_up <- function(x) {
+  trunc(x+sign(x)*0.5)
+}
