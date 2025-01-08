@@ -46,7 +46,7 @@ prep_data <- function(
   data.table::setnames(dat, c(var_datetime, var_glucose), c("obs_dttm", "glu"))
 
   ### Split into date and time variables
-  dat[, c("obs_idate", "obs_itime") := data.table::IDateTime(obs_dttmr, tz = tz)]
+  dat[, c("obs_idate", "obs_itime") := data.table::IDateTime(obs_dttm, tz = tz)]
 
   data.table::setkeyv(dat, c(id_vars, "obs_idate", "obs_itime"))
 
@@ -69,7 +69,7 @@ prep_data <- function(
   ## Completed missing days and times for day between the first and last
   ## Dropping empty data.tables
   datx <- Filter(function(x) nrow(x) > 0, split(dat, by = id_vars)) |>
-    lapply(completeDT, cols = c(id_vars, "obs_idate", "obs_itime")) |>
+    lapply(completeDT, cols = c(id_vars, "obs_idate", "obs_rtime")) |>
     data.table::rbindlist()
 
   ## Paste to force NA for non-existant dates.
