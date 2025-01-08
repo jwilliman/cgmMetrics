@@ -87,8 +87,6 @@ make_metrics <- function(data, id_vars, time_var = NULL, output = NULL) {
       , measure.vars = patterns("cgm"),
       variable.name = "cgm_measures", value_name = "value")
 
-    # dat_mlong[grepl("cgm(1.*t|.*3|.*4)", cgm_measures), c("prop", "lower", "upper") := as.list(
-    #   Hmisc::binconf(value, obs_n, return.df = TRUE))]
 
     ## Calculate times
     dat_clong[grepl("tir|tbr|tar|ttr", cgm_measures), time := as.ITime(value * 24 * 60 * 60)]
