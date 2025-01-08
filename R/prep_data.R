@@ -26,7 +26,7 @@ prep_data <- function(
   tz = Sys.timezone(), accuracy = 300L) {
 
  ## Due to NSE notes in R CMD check
-  glu <- obs_dn <- obs_itime <- obs_idate <- obs_dttm <- obs_dttmr <- NULL
+  glu <- obs_dn <- obs_itime <- obs_1time <- obs_idate <- obs_dttm <- obs_dttmr <- NULL
 
   if(is.null(var_datetime))
     var_datetime = rev(names(data))[2]
@@ -56,6 +56,7 @@ prep_data <- function(
 
   ### Round first observation of each day down according to specified accuracy
   ### then add time to all other observations rounded to nearest specified accuracy
+  dat[, obs_1time := min(obs_itime), by = c(id_vars, "obs_idate")]
   dat[, obs_rtime := (obs_1time %/% accuracy) * accuracy +
         round( as.numeric(obs_itime - obs_1time) / (accuracy) ) * (accuracy)]
 
