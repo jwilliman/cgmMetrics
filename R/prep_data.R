@@ -60,8 +60,8 @@ prep_data <- function(
   dat[, obs_rtime := (obs_1time %/% accuracy) * accuracy +
         round( as.numeric(obs_itime - obs_1time) / (accuracy) ) * (accuracy)]
 
-  ## Need to paste to get correct value for daylight savings.
-  dat[, obs_dttmr := as.POSIXct(paste(obs_idate, obs_rtime), tz = tz, format = "%Y-%m-%d %T")]
+  ## Add difference to get corrected daylight savings value.
+  dat[, obs_dttmr := obs_dttm + (obs_rtime - obs_itime)]
 
   # ## Correct missed date caused by daylight savings.
   # dat[is.na(obs_dttmr) & hour(obs_dttm) = 3
