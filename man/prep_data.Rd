@@ -9,7 +9,9 @@ prep_data(
   id_vars = NULL,
   var_datetime = NULL,
   var_glucose = NULL,
-  tz = Sys.timezone()
+  var_keep = NULL,
+  tz = Sys.timezone(),
+  accuracy = 300L
 )
 }
 \arguments{
@@ -21,7 +23,11 @@ prep_data(
 
 \item{var_glucose}{The name of the column containing the glucose measurements. If missing, assumes the last column.}
 
+\item{var_keep}{The names of any other columns to keep in the final dataset.}
+
 \item{tz}{The timezone of the datetime field. Defaults to the system timezone if not specified.}
+
+\item{accuracy}{Interval in seconds to round time to, defaults to 5 minutes (300 seconds).}
 }
 \value{
 A data.table with the following columns; grouping variables (as indicated), datetime variables (obs_dttm, obt_dttmr, obs_dt, obs_tm), glucose measurements (glu).

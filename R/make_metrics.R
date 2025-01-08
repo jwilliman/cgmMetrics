@@ -11,7 +11,6 @@
 #'
 #' @return A data.table with metrics named with the prefix 'cgm'.
 #' @import data.table
-#' @export
 #'
 #'
 
@@ -128,7 +127,6 @@ make_metrics <- function(data, id_vars, time_var = NULL, output = NULL) {
 #' @return A data.table containing the CGM summary metrics in long form.
 #' @import data.table
 #' @importFrom stats sd
-#' @export
 #'
 #'
 calc_summaries <- function(data, by_vars = NULL) {
