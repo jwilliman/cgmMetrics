@@ -22,7 +22,7 @@
 #'
 #'
 prep_data <- function(
-  data, id_vars = NULL, var_datetime = NULL, var_glucose = NULL, keep_vars = NULL,
+  data, id_vars = NULL, var_datetime = NULL, var_glucose = NULL, var_keep = NULL,
   tz = Sys.timezone(), accuracy = 300L) {
 
  ## Due to NSE notes in R CMD check
@@ -34,7 +34,7 @@ prep_data <- function(
   if(is.null(var_glucose))
     var_glucose = rev(names(date))[1]
 
-  keep_cols <- c(id_vars, keep_vars, var_datetime, var_glucose)
+  keep_cols <- c(id_vars, var_keep, var_datetime, var_glucose)
 
 
   ## Make standardised data.table of specified columns and column names

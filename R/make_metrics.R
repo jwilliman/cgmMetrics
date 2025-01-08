@@ -5,7 +5,8 @@
 #'   Bettelino *et al* (2023).
 #'
 #' @param data A data.table prepared for analysis using `prep_data` command.
-#' @param by_vars Grouping variables to summarise statistics by. If missing, assumes all character or factor columns.
+#' @param id_vars Additional subject level variables to include in the final dataset.
+#' @param time_var Time variables to group and summarise statistics by. If missing, assumes all character or factor columns.
 #' @param output What type of dataset of output. 'Wide' (default) or 'long'.
 #'
 #' @return A data.table with metrics named with the prefix 'cgm'.
